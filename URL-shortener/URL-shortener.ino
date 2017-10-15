@@ -12,9 +12,10 @@
     http://192.168.0.25/go/xasrew
 
  */
-
 #include <SPI.h>
 #include <Ethernet.h>
+#include <SD.h>
+
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
@@ -85,15 +86,28 @@ HTTPRequest parseRequest(EthernetClient &client) {
  */
 String shortURL(String url) {
   String response;
-  
+  String randStr = String(random(99999), DEC) + String(random(99999), DEC);
+  String filename = randStr + ".txt";
+  File storeFile;  // the file to store full address
+
   Serial.println("Short URL:");
-  Serial.println(url);
+  Serial.println(randStr);  
+
+  storeFile = SD.open(filename, FILE_WRITE);
+
+  if (storeFile) {
+    storeFile.println(url);
+    storeFile.close();  
+  } else {
+    Serial.println("Cant write file " + filename + " data " + url);
+  }
   
   response = "HTTP/1.1 200 OK\n";
   response += "Content-Type: text/html\n";
   response += "Connection: close\n\n";
   response += "<!DOCTYPE HTML><html><body>";
-  response += "http://192.168.0.25/go/xdssaw";
+  response += "http://192.168.0.25/go/";
+  response += randStr;
   response += "</body></html>";
 
   return response;
@@ -115,6 +129,34 @@ String notFound() {
   return response;
 }
 
+/*
+ * Read the short URL and redirect
+ */
+String unShortURL(String shortURL) {
+  String filename = shortURL + ".txt";
+  String url = "";
+  String response;
+
+  File storeFile;
+  storeFile = SD.open(filename);
+
+  if (!storeFile) {
+    Serial.println("Cant open the file " + filename);
+  } else {
+    while (storeFile.available()) {
+      url += storeFile.read();
+    }
+    storeFile.close();
+  }
+
+  response = "HTTP/1.1 302 Redirect\n";
+  response += "Location: ";
+  response += url;
+  response += "\n";
+
+  return response;
+}
+
 
 void setup() {
   // Open serial communications and wait for port to open:
@@ -129,6 +171,14 @@ void setup() {
   server.begin();
   Serial.print("server is at ");
   Serial.println(Ethernet.localIP());
+
+  randomSeed(analogRead(0));
+
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    return;
+  }
+  Serial.println("initialization done.");
 }
 
 
@@ -143,6 +193,8 @@ void loop() {
     // Routing
     if (request.baseURL.startsWith("/short/?url=")) {
       client.print(shortURL(request.baseURL.substring(12)));
+    } else if (request.baseURL.startsWith("/go/")) {
+      client.print(unShortURL(request.baseURL.substring(4)));
     } else {
       client.print(notFound());
     }
