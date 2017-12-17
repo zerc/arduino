@@ -3,93 +3,92 @@
  */
 
 
-const int ledCount = 6;    // the number of LEDs in the bar graph
+const int ledCount = 6;
 
-int ledPins[] = {
-  2, 3, 5, 7, 6, 4, // 8, 9, 10, 11
-};
-
-int current_mode = HIGH;
-
-void styleOne() {
-  for (int thisLed = 0; thisLed < ledCount; thisLed++) {
-    if (thisLed > 0) {
-      digitalWrite(ledPins[thisLed-1], LOW);
-    } else if (thisLed == 0) {
-      digitalWrite(ledPins[ledCount-1], LOW);
-    }
-    digitalWrite(ledPins[thisLed], HIGH);
-    delay(250 * max(thisLed, 1));
-  }
-}
-
-void styleTwo() {
-  for (int thisLed = 0; thisLed < ledCount; thisLed++) {
-    if (thisLed > 1) {
-      digitalWrite(ledPins[thisLed-1], LOW);
-      digitalWrite(ledPins[thisLed-2], LOW);
-    } else if (thisLed == 0) {
-      digitalWrite(ledPins[ledCount-1], LOW);
-      digitalWrite(ledPins[ledCount-2], LOW);
-    }
-
-    if (thisLed < ledCount) {
-      digitalWrite(ledPins[thisLed], HIGH);
-      digitalWrite(ledPins[thisLed+1], HIGH);
-    } else {
-      digitalWrite(ledPins[0], HIGH);
-      digitalWrite(ledPins[1], HIGH);
-    }
-    delay(500);
-  }
-}
-
-void styleThree() {
-  for (int thisLed = 0; thisLed < ledCount; thisLed++) {
-    digitalWrite(ledPins[thisLed], current_mode);
-  }
-
-  if (current_mode == HIGH) {
-    current_mode = LOW;
-  } else {
-    current_mode = HIGH;
-  }
-  delay(1000);
-}
-
-const int funcs_number = 3;
-int current_function = 0;
-
+int ledPins[] = {2, 3, 5, 7, 6, 4};  // adjust numbers depending on wiring
 
 void setup() {
-  // loop over the pin array and set them all to output:
   for (int thisLed = 0; thisLed < ledCount; thisLed++) {
     pinMode(ledPins[thisLed], OUTPUT);
   }
 }
 
 void loop() {
-  styleThree();
+//  styleThree();
+//  styleOneByOne();
+  styleComplexQueue();
+}
 
-  /* TODO: implement the proper styles changing s
-  unsigned long seconds;
-  seconds = millis() / 100;
+/*
+ * ======================
+ * Different blink styles
+ * ======================
+ */
 
-  // Change current function every X seconds
-  if (seconds % 20 == 0) {
-    if (current_function + 1 == funcs_number) {
-      current_function = 0;
+/*
+ * Constant blinking of all leds
+ */
+int ledMode = HIGH;
+
+void styleSimple() {
+  for (int i = 0; i < ledCount; i++) {
+    digitalWrite(ledPins[i], ledMode);
+  }
+
+  if (ledMode == HIGH) {
+    ledMode = LOW;
+  } else {
+    ledMode = HIGH;
+  }
+  delay(1150);
+}
+
+
+/*
+ * Blink leds one by one
+ */
+void styleOneByOne() {
+  for (int i = 0; i < ledCount; i++) {
+    // turn off the previous led
+    if (i > 0) {
+      digitalWrite(ledPins[i-1], LOW);
     } else {
-      current_function += 1;
+      digitalWrite(ledPins[ledCount-1], LOW);
     }
+
+    // turn on the current led
+    digitalWrite(ledPins[i], HIGH);
+    delay(500);
+  }
+}
+
+/*
+ * Turn ON leds one by one unti the last of them then keep it ON.
+ * Repeat until all of them will be ON.
+ * Then blink using all leds (change "simpleStyleNum" to define the number of "blinks") several times.
+ * Repeat everything.
+ * 
+ */
+int ledEnabledNum = ledCount;
+int simpleStyleNum = 7;  // how many times all leds should be ON
+
+void styleComplexQueue() {
+  for (int i = 0; i < ledEnabledNum; i++) {
+    if (i > 0) {
+      digitalWrite(ledPins[i-1], LOW);
+    }
+    digitalWrite(ledPins[i], HIGH);
+    delay(250);
   }
 
-  if (current_function == 0) {
-    styleOne();
-  } else if (current_function == 1) {
-    styleTwo();
-  } else if (current_function == 2) {
-    styleThree();
+  ledEnabledNum--;
+
+  if (ledEnabledNum < 0) {
+    ledMode = LOW; // first cycle of "styleSimple" should disable all leds
+    int cyclesNum = simpleStyleNum * 2 + 1; // equal number of OFF and ON cycles + 1 to turn OFF all leds at the first iteration
+    for (int i = 0; i < cyclesNum; i++) {
+      styleSimple();
+    }
+    ledEnabledNum = ledCount;
   }
-  */
 }
